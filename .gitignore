@@ -1,0 +1,28 @@
+
+# Python virtual environment and cache
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+.aws/
+*.pem
+*.key
+
+# Editor and OS files
+.vscode/
+.DS_Store
+Thumbs.db
