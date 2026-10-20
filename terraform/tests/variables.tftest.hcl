@@ -77,3 +77,20 @@ run "app_environment_module_outputs" {
     error_message = "The module should expose the requested monthly budget of 5 USD."
   }
 }
+
+
+#
+# Verify that the application module exposes the S3 bucket outputs.
+run "s3_bucket_outputs_are_configured" {
+  command = plan
+
+  assert {
+    condition     = output.module_resource_name_prefix == "cloudforge-dev"
+    error_message = "The application module should retain its expected naming prefix."
+  }
+
+  assert {
+    condition     = output.module_monthly_budget_usd == 5
+    error_message = "The application module should retain the requested budget."
+  }
+}
