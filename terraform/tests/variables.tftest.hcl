@@ -1,5 +1,8 @@
 
 # Verify that the default CloudForge inputs are accepted.
+# Mock AWS so Terraform tests don't require real AWS credentials
+# or create AWS resources.
+mock_provider "aws" {}
 run "valid_defaults" {
   command = plan
 
