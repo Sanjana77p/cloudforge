@@ -12,6 +12,7 @@ app = FastAPI(
 )
 
 
+
 class EnvironmentRequest(BaseModel):
     environment: Literal["dev", "staging", "prod"]
 
@@ -34,6 +35,16 @@ class EnvironmentRequest(BaseModel):
         pattern=r"^[a-z][a-z0-9-]*$",
     )
 
+    instance_size: Literal["small", "medium"] = "small"
+
+    monthly_budget_usd: float = Field(
+        default=5.0,
+        gt=0,
+        le=5.0,
+    )
+
+
+
 
 @app.post("/environments/plan")
 def plan_environment(request: EnvironmentRequest):
@@ -42,10 +53,13 @@ def plan_environment(request: EnvironmentRequest):
         "environment": request.environment,
         "application_name": request.application_name,
         "aws_region": request.aws_region,
+        "instance_size": request.instance_size,
+        "monthly_budget_usd": request.monthly_budget_usd,
         "status": "plan_created",
         "provisioning": False,
         "message": "Plan created successfully. No AWS resources were created.",
     }
+
 
 
 @app.get("/")

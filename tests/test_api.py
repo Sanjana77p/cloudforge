@@ -84,3 +84,42 @@ def test_environment_plan_rejects_invalid_region():
     )
 
     assert response.status_code == 422
+
+    
+def test_environment_plan_returns_instance_size_and_budget():
+    response = client.post(
+        "/environments/plan",
+        json={
+            "environment": "dev",
+            "instance_size": "medium",
+            "monthly_budget_usd": 4.5,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["instance_size"] == "medium"
+    assert response.json()["monthly_budget_usd"] == 4.5
+
+
+def test_environment_plan_rejects_budget_above_limit():
+    response = client.post(
+        "/environments/plan",
+        json={
+            "environment": "dev",
+            "monthly_budget_usd": 6.0,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_environment_plan_rejects_invalid_instance_size():
+    response = client.post(
+        "/environments/plan",
+        json={
+            "environment": "dev",
+            "instance_size": "large",
+        },
+    )
+
+    assert response.status_code == 422
