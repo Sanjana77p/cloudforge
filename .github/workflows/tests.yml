@@ -53,6 +53,10 @@ jobs:
       - name: Validate Terraform
         working-directory: terraform
         run: terraform validate
+        
+      - name: Run Terraform tests
+        working-directory: terraform
+        run: terraform test
 
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
