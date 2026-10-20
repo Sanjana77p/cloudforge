@@ -10,3 +10,13 @@ provider "aws" {
     }
   }
 }
+
+
+module "app_environment" {
+  source = "./modules/app_environment"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  instance_size      = "small"
+  monthly_budget_usd = 5
+}

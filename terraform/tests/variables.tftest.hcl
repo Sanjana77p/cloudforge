@@ -57,3 +57,23 @@ run "reject_invalid_project_name" {
     var.project_name
   ]
 }
+
+
+run "app_environment_module_outputs" {
+  command = plan
+
+  assert {
+    condition     = output.module_resource_name_prefix == "cloudforge-dev"
+    error_message = "The module should generate the cloudforge-dev naming prefix."
+  }
+
+  assert {
+    condition     = output.module_instance_size == "small"
+    error_message = "The module should use small as the default instance size."
+  }
+
+  assert {
+    condition     = output.module_monthly_budget_usd == 5
+    error_message = "The module should expose the requested monthly budget of 5 USD."
+  }
+}
