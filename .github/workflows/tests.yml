@@ -53,7 +53,13 @@ jobs:
       - name: Validate Terraform
         working-directory: terraform
         run: terraform validate
-        
+
+      
+      - name: Check Terraform plan
+        working-directory: terraform
+        run: terraform plan -input=false -lock=false
+
+
       - name: Run Terraform tests
         working-directory: terraform
         run: terraform test
