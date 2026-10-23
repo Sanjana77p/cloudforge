@@ -74,6 +74,7 @@ def test_environment_plan_rejects_invalid_application_name():
 
     assert response.status_code == 422
 
+
 def test_environment_plan_rejects_invalid_region():
     response = client.post(
         "/environments/plan",
@@ -85,7 +86,7 @@ def test_environment_plan_rejects_invalid_region():
 
     assert response.status_code == 422
 
-    
+
 def test_environment_plan_returns_instance_size_and_budget():
     response = client.post(
         "/environments/plan",
@@ -119,6 +120,65 @@ def test_environment_plan_rejects_invalid_instance_size():
         json={
             "environment": "dev",
             "instance_size": "large",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_cost_estimate_within_budget():
+    response = client.post(
+        "/cost/estimate",
+        json={
+            "environment": "dev",
+            "aws_region": "us-east-1",
+            "application_name": "sample-app",
+            "instance_size": "small",
+            "monthly_budget_usd": 5,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["estimated_monthly_cost_usd"] == 3.0
+    assert data["budget_status"] == "within_budget"
+    assert data["budget_exceeded"] is False
+    assert data["remaining_budget_usd"] == 2.0
+    assert data["estimate_type"] == "illustrative_demo_estimate"
+
+
+def test_cost_estimate_over_budget():
+    response = client.post(
+        "/cost/estimate",
+        json={
+            "environment": "prod",
+            "aws_region": "us-east-1",
+            "application_name": "sample-app",
+            "instance_size": "medium",
+            "monthly_budget_usd": 5,
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["estimated_monthly_cost_usd"] == 20.0
+    assert data["budget_status"] == "over_budget"
+    assert data["budget_exceeded"] is True
+    assert data["remaining_budget_usd"] == -15.0
+    assert data["estimate_type"] == "illustrative_demo_estimate"
+
+
+def test_cost_estimate_rejects_budget_above_limit():
+    response = client.post(
+        "/cost/estimate",
+        json={
+            "environment": "dev",
+            "aws_region": "us-east-1",
+            "application_name": "sample-app",
+            "instance_size": "small",
+            "monthly_budget_usd": 10,
         },
     )
 
