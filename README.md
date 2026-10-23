@@ -1,8 +1,8 @@
 # CloudForge — Self-Service Developer Platform
 
-CloudForge is a portfolio project exploring how platform engineering teams can simplify environment requests using API-driven workflows, Infrastructure as Code, automated testing, security scanning, and cost-aware guardrails.
+CloudForge is a portfolio project exploring how platform engineering teams can simplify environment requests through API-driven workflows, Infrastructure as Code (IaC), automated testing, security scanning, and cost-aware guardrails.
 
-The current version provides a local FastAPI environment-planning API and a Terraform configuration with reusable modules and automated validation. **It does not provision AWS resources yet.**
+The current MVP includes a FastAPI environment-planning API, a reusable Terraform module that defines secure S3 storage, automated validation and tests, and a GitHub Actions CI pipeline. AWS deployment, live cost estimation, and automated billing controls are not yet implemented.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ Developer
     v
 FastAPI Environment Planning API
     |
-    +--> Input validation
+    +--> Request validation
     +--> Environment plan response
     +--> Health and platform endpoints
     |
@@ -20,27 +20,65 @@ FastAPI Environment Planning API
 Terraform Configuration
     |
     +--> Reusable application environment module
-    +--> Input validation and outputs
-    +--> Terraform automated tests
+    +--> S3 storage configuration
+    +--> Public-access blocking
+    +--> SSE-S3 encryption and versioning
+    +--> Lifecycle policies and outputs
     |
     v
 GitHub Actions CI
     |
     +--> Python API tests
-    +--> Terraform validation and tests
-    +--> Terraform plan validation
+    +--> Terraform formatting and validation
+    +--> Terraform tests with mocked AWS provider
     +--> Checkov security scanning
 ```
 
+The CI workflow validates and tests the project without AWS credentials. It does not deploy resources or run a Terraform plan against AWS.
+
 ## Implemented Features
 
-- **FastAPI:** API endpoints for health checks, platform information, and environment planning.
-- **Input validation:** Validates environment, AWS region, application name, instance size, and requested monthly budget.
-- **Automated API tests:** pytest tests covering successful requests and invalid inputs.
-- **Terraform:** Version constraints, validated input variables, provider configuration, default tags, and outputs.
-- **Reusable Terraform module:** Application environment naming, common tags, and validated configuration inputs.
-- **Terraform tests:** Automated tests for default values, invalid inputs, and module outputs.
-- **GitHub Actions:** Automated API tests, Terraform validation, Terraform tests, plan validation, and Checkov scanning.
+### API and request validation
+
+- FastAPI endpoints for health checks, platform information, and environment planning.
+- Input validation for environment, AWS region, application name, instance size, and monthly budget.
+- Automated pytest coverage for valid requests and invalid inputs.
+- Interactive API documentation through Swagger UI.
+
+### Infrastructure as Code
+
+- Terraform provider and version constraints.
+- Validated input variables and default resource tags.
+- Reusable application environment module.
+- S3 bucket configuration with a generated name prefix.
+- S3 Block Public Access configuration.
+- Server-side encryption using SSE-S3 (AES256).
+- S3 versioning enabled.
+- Lifecycle rules to expire noncurrent object versions after 30 days and abort incomplete multipart uploads after 7 days.
+- Terraform outputs for the S3 bucket name and ARN.
+
+### Testing and security
+
+- Python API tests using pytest.
+- Terraform formatting, validation, and automated tests.
+- Mocked AWS provider for credential-free Terraform tests.
+- Checkov static security scanning in CI.
+- GitHub Actions workflows triggered by pushes to `main` and pull requests targeting `main`.
+
+### Security decisions
+
+The current Checkov scan reports 13 passed checks, 0 failed checks, and 4 skipped checks.
+
+The skipped checks are documented exceptions for the following controls:
+
+| Check | Current decision |
+|---|---|
+| CKV_AWS_18 | S3 access logging deferred |
+| CKV_AWS_144 | Cross-region replication deferred |
+| CKV2_AWS_62 | S3 event notifications deferred |
+| CKV_AWS_145 | KMS encryption deferred; SSE-S3 (AES256) is used |
+
+These exceptions are intentional MVP scope decisions, not implemented controls. Reassess them against security, audit, disaster recovery, and compliance requirements before production use.
 
 ## Technology Stack
 
@@ -58,11 +96,13 @@ GitHub Actions CI
 - Python 3.12 or compatible version
 - Git
 - Terraform CLI
-- PowerShell on Windows
+- PowerShell on Windows, or a compatible terminal
+
+AWS credentials are not required to run the API tests, Terraform validation, Terraform tests with the mocked provider, or the CI security scan.
 
 ## Run Locally
 
-Clone the repository and enter the project directory:
+Clone the repository:
 
 ```powershell
 git clone https://github.com/Sanjana77p/cloudforge.git
@@ -114,15 +154,17 @@ Invoke-RestMethod `
     -Body $body
 ```
 
-The API returns a validated plan. It does **not** create AWS resources, enforce actual AWS spending, or guarantee that the requested configuration can be deployed within the specified budget.
+The API validates the request and returns a planning response. It does not create AWS resources, enforce actual AWS spending, or guarantee that the requested configuration can be deployed within the requested budget.
 
 ## Run API Tests
+
+From the repository root:
 
 ```powershell
 python -m pytest -v
 ```
 
-## Validate Terraform
+## Validate and Test Terraform
 
 Run these commands from the repository root:
 
@@ -131,36 +173,49 @@ terraform -chdir=terraform fmt -check
 terraform -chdir=terraform init -backend=false
 terraform -chdir=terraform validate
 terraform -chdir=terraform test
-terraform -chdir=terraform plan -input=false -lock=false
 ```
 
-The current Terraform configuration defines variables, module outputs, and provider settings, but no deployable AWS resources.
+The Terraform tests use a mocked AWS provider, allowing configuration tests to run without AWS credentials.
 
-## Security and Cost Considerations
+## Run Checkov
 
-- Checkov scans the Terraform configuration in local development and CI.
-- Terraform and API tests validate the implemented configuration and request rules.
-- No AWS infrastructure is currently provisioned by this project.
-- The requested monthly budget is a validation constraint, not a live billing limit.
-- Actual AWS cost estimation, billing alerts, deployment permissions, and runtime security controls remain future enhancements.
-- Never commit AWS access keys, secret keys, tokens, or other credentials to Git.
+If Checkov is installed in your active Python environment:
+
+```powershell
+checkov -d terraform --framework terraform
+```
+
+The scan includes documented exceptions for four deferred controls. A skipped check should not be interpreted as proof that the corresponding control is implemented.
+
+## Cost and Deployment Considerations
+
+- The API's monthly budget input is a validation constraint, not an AWS billing cap.
+- No successful AWS deployment has been verified for this project.
+- The Terraform configuration defines an S3 bucket and associated security controls, but these resources exist only as configuration until deliberately deployed.
+- S3 storage, requests, and other AWS usage can incur charges after deployment.
+- Review AWS permissions, estimated costs, and required security controls before applying Terraform.
+- Actual cost estimation, AWS Budgets alerts, automated provisioning, and runtime monitoring remain future enhancements.
+
+Never commit AWS access keys, secret keys, session tokens, or other credentials to Git.
 
 ## Roadmap
 
-- [x] FastAPI environment planning API
+- [x] FastAPI environment-planning API
 - [x] API input validation and automated tests
-- [x] Terraform configuration and reusable module
+- [x] Reusable Terraform application environment module
+- [x] S3 storage configuration and security controls
 - [x] Terraform automated tests
 - [x] GitHub Actions CI workflow
 - [x] Checkov security scanning in CI
-- [x] Terraform plan validation in CI
+- [x] Credential-free Terraform tests using provider mocking
 - [ ] Infrastructure cost estimation
-- [ ] AWS budget and billing alerts
+- [ ] AWS Budgets and billing alerts
 - [ ] Reviewed, cost-controlled AWS deployment
+- [ ] Approval-based provisioning workflow
 - [ ] Automated deployment and runtime monitoring
 
 ## Project Status
 
-**Working local MVP — AWS deployment not yet implemented.**
+**Local MVP implemented; AWS deployment and live FinOps automation remain future work.**
 
-This project is being developed incrementally to demonstrate API development, Infrastructure as Code, automated validation, CI, and security-conscious platform engineering.
+CloudForge demonstrates API development, Infrastructure as Code, automated validation, CI, and security-conscious platform engineering. Its next phase focuses on realistic cost estimation, approval-based provisioning, and safe AWS deployment.
